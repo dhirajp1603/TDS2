@@ -9,6 +9,7 @@
 #   "ipykernel",
 #   "openai",
 #   "numpy",
+#   "load_dotenv",
 #   "scipy",
 # ]
 # ///
