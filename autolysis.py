@@ -9,10 +9,8 @@
 #   "ipykernel",
 #   "openai",
 #   "numpy",
-#   "jaraco",
-#   "load_dotenv",
-#   "python-dotenv"
-#   "scipy",
+#   "dotenv",
+#   "scipy"
 # ]
 # ///
 
@@ -32,6 +30,7 @@ load_dotenv()
 API_BASE = "https://aiproxy.sanand.workers.dev/openai/v1"
 AIPROXY_TOKEN = os.environ.get("AIPROXY_TOKEN")
 MODEL = "gpt-4o-mini"
+MAX_TOKENS = int(os.getenv("MAX_TOKENS", 800))  # Make max_tokens configurable
 
 # Configure OpenAI API client
 openai.api_base = API_BASE
@@ -44,6 +43,9 @@ if not openai.api_key:
 
 # Function to call the LLM
 def get_llm_response(prompt):
+    """
+    Calls the OpenAI API with the given prompt and retrieves the response.
+    """
     try:
         print("Sending request to LLM...")
         response = openai.ChatCompletion.create(
@@ -52,7 +54,7 @@ def get_llm_response(prompt):
                 {"role": "system", "content": "You are an AI analyst."},
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=800
+            max_tokens=MAX_TOKENS
         )
         print("LLM Raw Response:", response)
         if "choices" in response and len(response.choices) > 0:
@@ -109,6 +111,16 @@ for column in data.select_dtypes(include=[np.number]).columns:
     plt.savefig(os.path.join(output_dir, f"{column}_distribution.png"))
     plt.close()
 
+# Perform deeper statistical analysis
+# Example: Calculate z-scores to detect outliers
+outlier_info = {}
+for column in data.select_dtypes(include=[np.number]).columns:
+    col_mean = data[column].mean()
+    col_std = data[column].std()
+    z_scores = (data[column] - col_mean) / col_std
+    outliers = data[np.abs(z_scores) > 3][column]
+    outlier_info[column] = len(outliers)
+
 # Prepare data for LLM
 sample_data = data.head(5).to_dict(orient="records")
 llm_prompt = f"""
@@ -118,15 +130,16 @@ You are an AI data analyst. Here's the dataset summary:
 - Columns: {list(data.columns)}
 - Data Types: {data.dtypes.to_dict()}
 - Missing Values: {missing_values.to_dict()}
+- Outliers Detected: {outlier_info}
 - Sample Data: {sample_data}
 
 Your task:
 1. Analyze the dataset.
 2. Highlight important trends, outliers, and correlations.
 3. Suggest potential applications or interpretations of the data.
-4. Provide actionable insights.
+4. Provide actionable insights, implications, and recommendations.
 
-Be concise and professional.
+Be concise, structured, and professional.
 """
 
 llm_analysis = get_llm_response(llm_prompt)
