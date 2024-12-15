@@ -9,7 +9,9 @@
 #   "ipykernel",
 #   "openai",
 #   "numpy",
-#   "dotenv",
+#   "jaraco",
+#   "load_dotenv",
+#   "python-dotenv"
 #   "scipy",
 # ]
 # ///
