@@ -186,8 +186,7 @@ markdown_content = f"""
 """
 
 for column, stats in additional_stats.items():
-    markdown_content += f"| {column} | {stats['Skewness']:.2f} | {stats['Kurtosis']:.2f} |
-"
+    markdown_content += f"| {column} | {stats['Skewness']:.2f} | {stats['Kurtosis']:.2f} |\n"
 
 markdown_content += """
 
