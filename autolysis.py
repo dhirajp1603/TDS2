@@ -10,9 +10,8 @@
 #   "openai",
 #   "numpy",
 #   "python-dotenv",
-#   "jaraco",
-#   "load_dotenv",
-#   "scipy"
+#   "scipy",
+#   "scikit-learn"
 # ]
 # ///
 
@@ -24,6 +23,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import openai
 from dotenv import load_dotenv
+from scipy.stats import skew, kurtosis
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
 
 # Load environment variables
 load_dotenv()
@@ -89,6 +91,20 @@ summary_stats = data.describe(include="all").transpose()
 missing_values = data.isnull().sum()
 correlation_matrix = data.corr(numeric_only=True)
 
+# Advanced statistical analysis
+additional_stats = {}
+for column in data.select_dtypes(include=[np.number]).columns:
+    additional_stats[column] = {
+        "Skewness": skew(data[column].dropna()),
+        "Kurtosis": kurtosis(data[column].dropna())
+    }
+
+# Dimensionality reduction using PCA
+scaler = StandardScaler()
+data_scaled = scaler.fit_transform(data.select_dtypes(include=[np.number]).dropna(axis=1))
+pca = PCA(n_components=2)
+pca_result = pca.fit_transform(data_scaled)
+
 # Define the output directory based on the dataset name
 dataset_name = os.path.splitext(os.path.basename(csv_file))[0]
 output_dir = os.path.join(dataset_name)
@@ -107,6 +123,9 @@ plt.close()
 for column in data.select_dtypes(include=[np.number]).columns:
     plt.figure(figsize=(8, 6))
     sns.histplot(data[column].dropna(), kde=True, bins=30, color="blue")
+    plt.axvline(data[column].mean(), color='red', linestyle='dashed', linewidth=1, label='Mean')
+    plt.axvline(data[column].median(), color='green', linestyle='dashed', linewidth=1, label='Median')
+    plt.legend()
     plt.title(f"Distribution of {column}")
     plt.xlabel(column)
     plt.ylabel("Frequency")
@@ -124,7 +143,7 @@ for column in data.select_dtypes(include=[np.number]).columns:
     outlier_info[column] = len(outliers)
 
 # Prepare data for LLM
-sample_data = data.head(5).to_dict(orient="records")
+sample_data = data.head(3).to_dict(orient="records")  # Limit to 3 rows for efficiency
 llm_prompt = f"""
 You are an AI data analyst. Here's the dataset summary:
 - Number of Rows: {data.shape[0]}
@@ -133,6 +152,8 @@ You are an AI data analyst. Here's the dataset summary:
 - Data Types: {data.dtypes.to_dict()}
 - Missing Values: {missing_values.to_dict()}
 - Outliers Detected: {outlier_info}
+- Advanced Stats (Skewness & Kurtosis): {additional_stats}
+- PCA Result: Explained Variance Ratios: {pca.explained_variance_ratio_}
 - Sample Data: {sample_data}
 
 Your task:
@@ -158,6 +179,17 @@ markdown_content = f"""
 
 ## Key Insights
 {llm_analysis}
+
+## Advanced Stats
+| Column | Skewness | Kurtosis |
+|--------|----------|----------|
+"""
+
+for column, stats in additional_stats.items():
+    markdown_content += f"| {column} | {stats['Skewness']:.2f} | {stats['Kurtosis']:.2f} |
+"
+
+markdown_content += """
 
 ## Visualizations
 ### Correlation Matrix
